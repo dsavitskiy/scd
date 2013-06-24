@@ -1,0 +1,43 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:		scd
+# Required-Start:	$remote_fs $syslog
+# Required-Stop:	$remote_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		
+# Short-Description:	Shoutcast server respawn daemon
+### END INIT INFO
+
+set -e
+
+. /lib/lsb/init-functions
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting Shoutcast respawn daemon" "scd" || true
+	if start-stop-daemon --start --quiet --oknodo --chuid shoutcast --pidfile /var/lib/scd/scd.pid --exec /opt/scd/scd -- start; then
+	    log_end_msg 0 || true
+	else
+	    log_end_msg 1 || true
+	fi
+	;;
+  stop)
+	log_daemon_msg "Stopping Shoutcast respawn daemon" "scd" || true
+	if start-stop-daemon --stop --quiet --oknodo --pidfile /var/lib/scd/scd.pid; then
+	    log_end_msg 0 || true
+	else
+	    log_end_msg 1 || true
+	fi
+	;;
+
+  status)
+	status_of_proc -p /var/lib/scd/scd.pid /opt/scd/scd scd && exit 0 || exit $?
+	;;
+
+  *)
+	log_action_msg "Usage: /etc/init.d/scd {start|stop|status}" || true
+	exit 1
+esac
+
+exit 0
