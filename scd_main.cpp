@@ -1,8 +1,34 @@
+/****************************************************************************
+ * Copyright (c) 2013 kona4kona (kona4kona@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom
+ * the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
+ * OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+ * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * ****************************************************************************
 
 /**
- * 1) starts sc for each config file in /etc/shoutcast
- * 2) monitors is an sc crashes, and restarts it
- * 3) writes to log about restarts
+ * SC    "ShoutCast"
+ * SCD   "ShoutCast Daemon"
+ *
+ * SCD does the following:
+ *
+ * 1) starts a SC process for each config file found in /etc/scd/
+ * 2) monitors the child SC processes: if one of them crashes, SCD restarts it
+ * 3) logs about restarts
  */
 
 #include <iostream>
@@ -22,18 +48,10 @@
 
 #define SC_CONFIG   "/etc/scd"
 
-#if 1
 #define SC_EXEC     "/opt/shoutcast/sc_serv"
 #define SC_PID      "/var/lib/scd/scd.pid"
 #define SC_LOGDIR   "/var/lib/scd/"
 #define SC_LOG      SC_LOGDIR"scd.log"
-#else
-#define SC_VAR      "./"
-#define SC_EXEC     "./sc_test"
-#define SC_PID      SC_VAR"sc_daemon.pid"
-#define SC_LOG      SC_VAR"sc_daemon.log"
-#endif
-
 
 struct Child {
     pid_t pid;
@@ -172,7 +190,7 @@ void start()
     log.close();
 }
 
-
+// Reads PID from SCD's pid file.
 int oldPID()
 {
     std::ifstream pidfile(SC_PID);
@@ -185,6 +203,7 @@ int oldPID()
 }
 
 
+// Checks if a SCD is running, and returns its PID
 int running()
 {
     int old = oldPID();
@@ -230,6 +249,10 @@ void sigHandler(int signum)
 void usage()
 {
     std::cout << "Usage: scd start|stop|status|report" << std::endl;
+    std::cout << "    start     starts SCD daemon" << std::endl;
+    std::cout << "    stop      stops a currently running SCD daemon" << std::endl;
+    std::cout << "    status    returns SCD daemon status in the program exit code: return 0 if a daemon is running, 1 if not" << std::endl;
+    std::cout << "    report    prints SCD daemon status to the standard output" << std::endl;
 }
 
 
@@ -237,7 +260,7 @@ int main(int argc, char *argv[])
 {
     signal(SIGTERM, sigHandler);
 
-    // Check log file
+    // Check if log file can be opened.
     std::ofstream log(SC_LOG, std::ofstream::app);
     if (!log.good()) {
         std::cerr << "cannot open log " << SC_LOG << ": " << strerror(errno) << std::endl;
@@ -250,6 +273,8 @@ int main(int argc, char *argv[])
         return EINVAL;
     }
 
+    // Choose action:
+    // start, stop, status, report
     if (strcmp(argv[1], "start") == 0) {
         int pid = running();
         if (pid > 0) {
